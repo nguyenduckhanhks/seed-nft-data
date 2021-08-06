@@ -191,7 +191,7 @@ const seedEpisode = async (coutPerSerie) => {
             const newPageNumber = pageNumbers[count % keys.length];
             const newDes = oldEpisodeField[6].substring(0, oldEpisodeField[6].length - 1) + chap;
             const newThumbnail = thumbnails[count % keys.length];
-            const newAmount = "1";
+            const newAmount = getRandomInt(10) + 1;
             const newUserCreater = cleanField(userFileData.content[userIndex].split(';'))[0];
             const newPrice = getRandomInt(100);
             const new_id = cleanField(idFileData.content[count + startIdSeriePos].split(','))[1];
@@ -228,6 +228,296 @@ const seedEpisode = async (coutPerSerie) => {
     await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newEpisode.csv', result.substring(0, result.length - 1));
 }
 
+const seedCreator = async() => {
+    const usersFile = await getCSVFiles('users');  
+    const idFile = await getCSVFiles('id');
+
+    const {content} = await getContentCSVFiles(usersFile[0], ';');
+    const idFileData = await getContentCSVFiles(idFile[0], ';');
+
+    let result = 'userid;creatorid \n';
+    const startIdSeriePos = getRandomInt(10000 - 2000);
+    await Promise.map(
+        content,
+        async (line, index) => {
+            const field = cleanField(line.split(';'));
+            result += field[0] + ';' + cleanField(idFileData.content[index + startIdSeriePos].split(','))[1] + '\n';
+        }
+    )
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newCreatorId.csv', result.substring(0, result.length - 1));
+}
+// seedCreator();
+
+const seedSerieData = async() => {
+    const idSerieFile = await getCSVFiles('idSerie');   
+    const {content} = await getContentCSVFiles(idSerieFile[0], ';');
+
+    const episodeFile = await getCSVFiles('newEpisode');   
+    const episodeData = await getContentCSVFiles(episodeFile[0], ';');
+
+    const creatorIdFile = await getCSVFiles('newCreatorId'); 
+    const CreatorIdData = await getContentCSVFiles(creatorIdFile[0], ';');
+
+    const headers = [
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/f0c37c95-af79-42d4-bd96-5888181031e8-AriumWeb20x9.004.png",
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/7a688421-b94a-48ad-9431-ae618a13cd40-AriumWeb20x9.002.png",
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/e84c4301-3e79-4813-ae80-4611552b4304-AriumWeb20x9.003.png",
+    ];
+
+    const thumbnails = [
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/346fa06b-c795-405d-b12c-63b8c21860d7-AriumWeb1x1.028.png",
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/45ed8c91-c904-4c35-b57e-1e15a4dfa883-AriumWeb1x1.003.png",
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/17a0393f-bbff-494a-bb7d-e32f36413ced-AriumWeb1x1.031.png",
+        "https://nftjapan.s3.ap-southeast-1.amazonaws.com/image/7fa5fc19-e318-4c92-9478-1fc566b92e23-AriumWeb1x1.015.png"
+    ];
+
+    let result = '\n';
+    await Promise.map(
+        content,
+        async (line, index) => {
+            const serieFileField = cleanField(line.split(';'));
+
+            const newSerieId = serieFileField[0];
+            const newCate = serieFileField[1];
+            
+            let arrEpisodes = "[";
+            let newUserCreater = "";
+            let newCreatedBy = '';
+            let newTimeRealed = '';
+            episodeData.content.forEach(episo => {
+                const arrData = cleanField(episo.split(';'));
+                if(arrData[7] == newSerieId){
+                    arrEpisodes += '"' + arrData[5] +'"' + ',';
+                    newUserCreater = arrData[10];
+                }
+                if(newTimeRealed == '' && arrData[12] != 'null') newTimeRealed = arrData[12];
+                else {
+                    if(arrData[12] != 'null' && new Date(newTimeRealed) < new Date(arrData[12])) 
+                        newTimeRealed = arrData[12];
+                }
+            })
+            arrEpisodes = arrEpisodes.substring(0, arrEpisodes.length - 1) + ']';
+
+            CreatorIdData.content.forEach(data => {
+                const field = cleanField(data.split(';'));
+                if(field[0] == newUserCreater)newCreatedBy = field[1];
+            })
+
+            const newName = generateNameSerie();
+            const newSumary = generateDes();
+            const newHeader = headers[index % headers.length];
+            const newThumbnail = thumbnails[index % thumbnails.length];
+            
+            result += newSerieId + ';' + arrEpisodes + ';' + newCate + ';' + newName + ';' + newSumary + ';' + newHeader + ';' +
+            newThumbnail + ';' + newCreatedBy + ';' + newUserCreater + ';' + newTimeRealed + '\n';
+        }
+    )
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newSeries.csv', result.substring(0, result.length - 1));
+}
+
+const seedCreatorTable = async () => {
+    const creatorIdFile = await getCSVFiles('newCreatorId'); 
+    const CreatorIdData = await getContentCSVFiles(creatorIdFile[0], ';');
+
+    const seriesFile = await getCSVFiles('newSeries'); 
+    const seriesData = await getContentCSVFiles(seriesFile[0], ';');
+
+    let result = "\n";
+    await Promise.map(
+        CreatorIdData.content,
+        async (line, index) => {
+            const CreatorIdField = cleanField(line.split(';'));   
+            const new_id = CreatorIdField[1];
+            const newUser = CreatorIdField[0];
+            let newSeries = '[';
+            seriesData.content.forEach(data => {
+                const field = cleanField(data.split(';'));
+                if(field[8] == newUser){
+                    newSeries += '"' + field[0] +'"' + ',';
+                }
+            })
+            newSeries = newSeries.substring(0, newSeries.length - 1) + ']';
+
+            result += new_id + ';' + newSeries + ';' + newUser + '\n';
+        }
+    )
+
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newCreator.csv', result.substring(0, result.length - 1));
+}
+
+const renderCustomer1 = async () => {
+    const customerUserFile = await getCSVFiles('customerUser');
+    const idFile = await getCSVFiles('id');
+
+    const customerUserData = await getContentCSVFiles(customerUserFile[0], ';');
+    const idFileData = await getContentCSVFiles(idFile[0], ';');
+
+    let result = '\n';
+    const startIdSeriePos = getRandomInt(10000 - 100);
+    const customer = await Promise.map(
+        customerUserData.content,
+        async (line, index) => {
+            const newUser = cleanField(line.split(';'))[0];
+            const new_id = cleanField(idFileData.content[index + startIdSeriePos].split(','))[1];
+            const newCarts = [];
+            const newPayment = [];
+            const newBookshelf = [];
+            return {
+                newUser,
+                new_id,
+                newCarts,
+                newPayment,
+                newBookshelf,
+            }
+        }
+    )
+
+    const episodeFile = await getCSVFiles('newTmp');
+    const episodeData = await getContentCSVFiles(episodeFile[0], ';');
+
+    const episodes = await Promise.map(episodeData.content,
+        async (line) => {
+            const field = cleanField(line.split(';'));
+            return {
+                _id: field[5],
+                amount: field[9],
+                price: field[11]
+            }
+        }    
+    )
+
+    let startTokenId = 100000000;
+    const editions = episodes.map((data, index) => {
+        return {
+            episode: data._id,
+            tokenId: startTokenId + index,
+            amount: data.amount,
+            buyer: [],
+            amountPublish: Math.floor(Math.random(new Date()) * data.amount) + 1
+        }
+    })
+
+    const txhash = [
+        "0x2f70b15429e710b21e0990b624aac970b4897b92d906add1205e2eb828654842",
+        "0x004ab2af0b8ee2a91425926b6fff58c29da4014c53aaa6032971e6fb3c1cafc9",
+        "0x6c1f9edea3280f6152d2497b995893c42e661a8e579dbde5468f794a286c801b",
+        "0xf2c368389ec2125b82f552f43fa0a602da8a5bcce7af5472e11b4eb1f937a3a7"
+    ];
+
+    const carts = [];
+    const transactions = [];
+    const startIdCartPos = getRandomInt(10000 - 100);
+
+    await Promise.map(
+        customer,
+        async (customerData, index) => {
+            const amoutBuy = Math.floor(Math.random(new Date()) * 10 + 10);
+
+            const newCart = {
+                _id: cleanField(idFileData.content[index + startIdCartPos].split(','))[1],
+                isShopping: '',
+                cartItems: [],
+                user: customerData['new_id'], // customer id
+            };
+            for(let i = 0; i < amoutBuy; i++) {
+                let randomEpisodeIndex = Math.floor(Math.random(new Date()) * episodes.length)
+                let randomAmountBuy = getRandomInt(2) + 1;
+                do{
+                    randomEpisodeIndex = Math.floor(Math.random(new Date()) * episodes.length)
+                    const editionData = editions[randomEpisodeIndex];
+                    randomAmountBuy = getRandomInt(2) + 1;
+
+                    let amountBuyed = 0;
+                    editionData['buyer'].forEach(data => {
+                        amountBuyed += data['amount'];
+                    })
+
+                } while(editions[randomEpisodeIndex]['amountPublish'] <= (randomAmountBuy + amountBuyed));
+
+                const editionData = editions[randomEpisodeIndex];
+
+                let amountBuyed = 0;
+                editionData['buyer'].forEach(data => {
+                    amountBuyed += data['amount'];
+                })
+
+                if(editionData['amountPublish'] > (randomAmountBuy + amountBuyed) ) {
+                    const newBuyer = {
+                        customer: customerData['new_id'],
+                        amount: randomAmountBuy
+                    }
+                    editions[randomEpisodeIndex]['buyer'].push(newBuyer);
+                    newCart['cartItems'].push({
+                        quantity: randomAmountBuy,
+                        episode: episodes[randomEpisodeIndex]['_id'],
+                        price: episodes[randomEpisodeIndex]['price']
+                    })
+                    customer[index]['newBookshelf'].push(episodes[randomEpisodeIndex]['_id'])
+                }
+            }
+            carts.push(newCart);
+            transactions.push({
+                fee:Math.floor(Math.random(new Date()) * 100000 + 100000),
+                buyer: customerData['new_id'],
+                txHash: txhash[index % txhash.length],
+                cart: newCart['_id']
+            });
+        }
+    )
+
+    let resultCus = '\n';
+    customer.forEach(cus => {
+        resultCus += cus['new_id'] + ';' + '[]' + ';' + '[]' + ';' + JSON.stringify(cus['newBookshelf']) 
+                    + ';' + cus['newUser'] + '\n';
+    })
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newCustomer.csv', resultCus);
+
+    let resultEdition = 'tokenId;episode;amount;buyer;amountPublish\n';
+    editions.forEach(edi => {
+        resultEdition += edi['tokenId'] + ';' + edi['episode'] + ';' + edi['amount'] + ';' + JSON.stringify(edi['buyer'])
+                        + ';' + edi['amountPublish'] + '\n';
+    })
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newEdittion.csv', resultEdition);
+
+    let resultCart = '\n';
+    carts.forEach(cart => {
+        resultCart += cart['_id'] + ';' + cart['isShopping'] + ';' + JSON.stringify(cart['cartItems']) + ';' + cart['user'] + '\n';
+    })
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newCart.csv', resultCart);
+
+    let resultTransactions = '\n';
+    transactions.forEach(tran => {
+        resultTransactions += tran['fee'] + ';' + tran['buyer'] + ';' + tran['txHash'] + ';' + tran['cart'] + '\n';
+    }) 
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newTransaction.csv', resultTransactions);
+}
+renderCustomer1();
 
 // seedSerieId(200);
 // seedEpisode(10);
+// seedSerieData();
+// seedCreatorTable();
+
+const format = async() => {
+    const file = await getCSVFiles('tmp');
+    const {content} = await getContentCSVFiles(file[0], ';');
+
+    let result = "\n";
+    await Promise.map(
+        content,
+        async (line) => {
+            const field = cleanField(line.split(';'));
+            field.forEach((data, index) => {
+                if(index != 9) result += data + ';';
+                else {
+                    result += getRandomInt(10) + 1 + ';';
+                }
+            })
+            result = result.substring(0, result.length - 1) + '\n';
+        }
+    )
+
+    await writeFile('/home/khanhnd/Data/sota/nft/my_node/data/newTmp.csv', result.substring(0, result.length - 1));
+}
+
+// format();

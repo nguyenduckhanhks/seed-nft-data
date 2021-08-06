@@ -28,8 +28,8 @@ exports.generateNameSerie = () => {
 	let name = '';
 	for (let i = 0; i < length; i++) {
 		const a = Math.floor(Math.random() * 2);
-		if(a == 0) name += capFirst(name1[getRandomInt(0, name1.length + 1)]) + ' ';
-		if(a == 1) name += capFirst(name2[getRandomInt(0, name2.length + 1)]) + ' ';
+		if(a == 0) name += capFirst(name1[getRandomInt(0, name1.length)]) + ' ';
+		if(a == 1) name += capFirst(name2[getRandomInt(0, name2.length)]) + ' ';
 	}
 	return name
 }
@@ -39,8 +39,8 @@ exports.generateDes = () => {
 	let name = '';
 	for (let i = 0; i < length; i++) {
 		const a = Math.floor(Math.random() * 2);
-		if(a == 0) name += capFirst(name1[getRandomInt(0, name1.length + 1)]) + ' ';
-		if(a == 1) name += capFirst(name2[getRandomInt(0, name2.length + 1)]) + ' ';
+		if(a == 0) name += capFirst(name1[getRandomInt(0, name1.length)]) + ' ';
+		if(a == 1) name += capFirst(name2[getRandomInt(0, name2.length)]) + ' ';
 	}
 	return name
 }
